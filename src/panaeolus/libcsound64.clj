@@ -34,7 +34,7 @@
 (defn cache-csound!
   "Cache csound and return the cache directory"
   []
-  (when (not (.exists csound-cache-folder))
+  (when-not (.exists csound-cache-folder)
     (.mkdirs csound-cache-folder))
   (let [os (get-os)
         classp-loc (io/file
@@ -49,3 +49,17 @@
           (with-open [in (io/input-stream (first path-obj))]
             (io/copy in destination)))))
     cache-foler-location))
+
+(defn spit-csound!
+  "almost same as cache-csound, except it can choose any destination,
+  returns nil"
+  [dest]
+  (doseq [os ["linux" "darwin" "windows"]]
+    (let [classp-loc (io/file "libcsound64" os "x86_64")
+          resource-dir (cp/resources (.getPath classp-loc))
+          destination-dir (io/file dest classp-loc)]
+      (.mkdirs destination-dir)
+      (doseq [[file-name path-obj] resource-dir]
+        (let [destination (io/file (str destination-dir file-name))]
+          (with-open [in (io/input-stream (first path-obj))]
+            (io/copy in destination)))))))
