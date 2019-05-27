@@ -1,0 +1,2 @@
+{:paths ["native" "src"]
+ :deps {cpath-clj {:mvn/version "0.1.2"}}}
