@@ -67,8 +67,6 @@
                     (case os :linux "linux" :mac "darwin" :windows "windows")
                     "x86_64")
         resource-dir (cp/resources (.getPath classp-loc))
-        _ (prn "Path" (.getPath classp-loc))
-        _ (prn "resource-dir" resource-dir)
         cache-foler-location (.getAbsolutePath csound-cache-folder)]
     (if (empty? resource-dir)
       ;; FIXME: fix the pom.xml problem so this can be deleted
