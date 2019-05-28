@@ -1,6 +1,20 @@
 (ns panaeolus.libcsound64
   (:require [clojure.java.io :as io]
-            [cpath-clj.core :as cp]))
+            [clojure.string :as string]
+            [cpath-clj.core :as cp])
+  (:import [java.util.jar JarFile JarEntry]
+           [java.io FileOutputStream]))
+
+(set! *warn-on-reflection* true)
+
+(defmacro while-let
+  "The composition of a side-effects based while, and a single-binding let, ala if-let.\n\nAvoids loop/recur redundance."
+  [[sym expr] & body]
+  `(loop [~sym ~expr]
+     (when ~sym
+       ~@body
+       (recur ~expr))))
+
 
 (def ^:private current-csound-version "6.13")
 
@@ -27,9 +41,20 @@
              (.getAbsolutePath
               (io/file library "Caches" "panaeolus"))))))
 
-(def ^:private csound-cache-folder
+(def ^:private ^java.io.File csound-cache-folder
   (io/file (get-cache-dir)
            (str "csound-" current-csound-version)))
+
+
+(defn this-jar
+  "utility function to get the name of jar in which this function is invoked"
+  [& [^java.lang.Class ns]]
+  (->>  ^java.lang.Class (or ns ^java.lang.Class (class *ns*))
+        ^java.security.ProtectionDomain (.getProtectionDomain)
+        ^java.security.CodeSource (.getCodeSource)
+        ^java.net.URL (.getLocation)
+        (.toURI)
+        .getPath))
 
 (defn cache-csound!
   "Cache csound and return the cache directory"
@@ -43,11 +68,21 @@
                     "x86_64")
         resource-dir (cp/resources (.getPath classp-loc))
         cache-foler-location (.getAbsolutePath csound-cache-folder)]
-    (doseq [[file-name path-obj] resource-dir]
-      (let [destination (io/file (str cache-foler-location file-name))]
-        (when-not (.exists destination)
-          (with-open [in (io/input-stream (first path-obj))]
-            (io/copy in destination)))))
+    (if (empty? resource-dir)
+      ;; FIXME: fix the pom.xml problem so this can be deleted
+      (let [jar-file (JarFile. ^java.lang.String (this-jar))
+            entries (enumeration-seq (.entries jar-file))]
+        (doseq [^JarEntry entry entries]
+          (let [entry-path (.getName entry)]
+            (when (and (string/includes? entry-path (.getPath classp-loc))
+                       (not (.isDirectory entry)))
+              (io/copy (.getInputStream jar-file entry)
+                       (io/file cache-foler-location (.getName (io/file (.getName entry)))))))))
+      (doseq [[file-name path-obj] resource-dir]
+        (let [destination (io/file (str cache-foler-location file-name))]
+          (when-not (.exists destination)
+            (with-open [in (io/input-stream (first path-obj))]
+              (io/copy in destination))))))
     cache-foler-location))
 
 (defn spit-csound!
