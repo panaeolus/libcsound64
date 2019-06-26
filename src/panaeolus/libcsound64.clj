@@ -99,7 +99,13 @@
     (let [classp-loc (io/file "libcsound64" os "x86_64")
           resource-dir (cp/resources (.getPath classp-loc))
           destination-dir (io/file dest classp-loc)]
-      (.mkdirs (io/file destination-dir "Opcodes64"))
+	  (.mkdirs destination-dir)
+      (when (and (= os "darwin") (not (.exists (io/file destination-dir "Opcodes64"))))
+        (.mkdirs (io/file destination-dir "Opcodes64")))
+      (when (and (= os "windows") (not (.exists (io/file destination-dir "jack"))))
+        (.mkdirs (io/file destination-dir "jack")))
+      (when (and (= os "windows") (not (.exists (io/file destination-dir "win32libs"))))
+        (.mkdirs (io/file destination-dir "win32libs")))
       (doseq [[file-name path-obj] resource-dir]
         (let [destination (io/file (str destination-dir file-name))]
           (with-open [in (io/input-stream (first path-obj))]
