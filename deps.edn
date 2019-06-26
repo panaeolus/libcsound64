@@ -1,2 +1,4 @@
 {:paths ["native" "src"]
- :deps {cpath-clj {:mvn/version "0.1.2"}}}
+ :deps {cpath-clj {:mvn/version "0.1.2"}
+        jack2     {:git/url "https://github.com/panaeolus/jack2.git"
+		           :sha "e5d454e2c99dfde24dc5a48fa8f89178b6a1a7f4"}}}

@@ -59,8 +59,6 @@
 (defn cache-csound!
   "Cache csound and return the cache directory"
   []
-  (when-not (.exists (io/file csound-cache-folder "Opcodes64"))
-    (.mkdirs (io/file csound-cache-folder "Opcodes64")))
   (let [os (get-os)
         classp-loc (io/file
                     "libcsound64"
@@ -68,12 +66,20 @@
                     "x86_64")
         resource-dir (cp/resources (.getPath classp-loc))
         cache-foler-location (.getAbsolutePath csound-cache-folder)]
+    (when (and (= os :darwin) (not (.exists (io/file csound-cache-folder "Opcodes64"))))
+      (.mkdirs (io/file csound-cache-folder "Opcodes64")))
+    (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "jack"))))
+      (.mkdirs (io/file csound-cache-folder "jack")))
+    (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "win32libs"))))
+      (.mkdirs (io/file csound-cache-folder "win32libs")))
     (if (empty? resource-dir)
       ;; FIXME: fix the pom.xml problem so this can be deleted
       (let [jar-file (JarFile. ^java.lang.String (this-jar))
             entries (enumeration-seq (.entries jar-file))]
         (doseq [^JarEntry entry entries]
+		  (prn "ENTRY" entry)
           (let [entry-path (.getName entry)]
+		    (prn entry-path)
             (when (and (string/includes? entry-path (.getPath classp-loc))
                        (not (.isDirectory entry)))
               (io/copy (.getInputStream jar-file entry)
