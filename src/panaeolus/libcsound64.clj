@@ -45,7 +45,6 @@
   (io/file (get-cache-dir)
            (str "csound-" current-csound-version)))
 
-
 (defn this-jar
   "utility function to get the name of jar in which this function is invoked"
   [& [^java.lang.Class ns]]
@@ -68,6 +67,10 @@
         cache-foler-location (.getAbsolutePath csound-cache-folder)]
     (when (and (= os :darwin) (not (.exists (io/file csound-cache-folder "Opcodes64"))))
       (.mkdirs (io/file csound-cache-folder "Opcodes64")))
+    (when (and (= os :linux) (not (.exists (io/file csound-cache-folder "csound"))))
+      (.mkdirs (io/file csound-cache-folder "csound"))
+      (when (not (.exists (io/file csound-cache-folder "csound" "plugins64-6.0")))
+        (.mkdirs (io/file csound-cache-folder "csound" "plugins64-6.0"))))
     (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "jack"))))
       (.mkdirs (io/file csound-cache-folder "jack")))
     (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "win32libs"))))
@@ -77,9 +80,7 @@
       (let [jar-file (JarFile. ^java.lang.String (this-jar))
             entries (enumeration-seq (.entries jar-file))]
         (doseq [^JarEntry entry entries]
-		  (prn "ENTRY" entry)
           (let [entry-path (.getName entry)]
-		    (prn entry-path)
             (when (and (string/includes? entry-path (.getPath classp-loc))
                        (not (.isDirectory entry)))
               (io/copy (.getInputStream jar-file entry)
@@ -99,9 +100,13 @@
     (let [classp-loc (io/file "libcsound64" os "x86_64")
           resource-dir (cp/resources (.getPath classp-loc))
           destination-dir (io/file dest classp-loc)]
-	  (.mkdirs destination-dir)
+      (.mkdirs destination-dir)
       (when (and (= os "darwin") (not (.exists (io/file destination-dir "Opcodes64"))))
         (.mkdirs (io/file destination-dir "Opcodes64")))
+      (when (and (= os "linux") (not (.exists (io/file destination-dir "csound"))))
+        (.mkdirs (io/file destination-dir "csound"))
+        (when (not (.exists (io/file destination-dir "csound" "plugins64-6.0")))
+          (.mkdirs (io/file destination-dir "csound" "plugins64-6.0"))))
       (when (and (= os "windows") (not (.exists (io/file destination-dir "jack"))))
         (.mkdirs (io/file destination-dir "jack")))
       (when (and (= os "windows") (not (.exists (io/file destination-dir "win32libs"))))
