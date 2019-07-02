@@ -83,8 +83,9 @@
           (let [entry-path (.getName entry)]
             (when (and (string/includes? entry-path (.getPath classp-loc))
                        (not (.isDirectory entry)))
-              (io/copy (.getInputStream jar-file entry)
-                       (io/file cache-foler-location (.getName (io/file (.getName entry)))))))))
+              (let [destination (io/file cache-foler-location
+                                         (.getParent (io/file entry-path)))]
+                (io/copy (.getInputStream jar-file entry) destination))))))
       (doseq [[file-name path-obj] resource-dir]
         (let [destination (io/file (str cache-foler-location file-name))]
           (when-not (.exists destination)
