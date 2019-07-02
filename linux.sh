@@ -18,3 +18,7 @@ patchelf --force-rpath --set-rpath '$ORIGIN' ./libvorbisenc.so.2
 
 mv libvorbis.so.0.4.8 libvorbis.so.0
 patchelf --force-rpath --set-rpath '$ORIGIN' ./libvorbis.so.0
+
+for lib in ./csound/plugins64-6.0/*; do
+    patchelf --force-rpath --set-rpath '$ORIGIN' "$lib"
+done
