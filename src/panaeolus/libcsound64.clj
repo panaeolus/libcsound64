@@ -55,6 +55,11 @@
         (.toURI)
         .getPath))
 
+(defn ensure-unix-path [^String path]
+  (-> path
+      (string/replace "\\\\" "/")
+      (string/replace "\\" "/")))
+
 (defn cache-csound!
   "Cache csound and return the cache directory"
   []
@@ -77,18 +82,16 @@
     (when (and (= os :windows) (not (.exists (io/file cache-folder "win32libs"))))
       (.mkdirs (io/file cache-folder "win32libs")))
     (if (empty? resource-dir)
-      ;; FIXME: fix the pom.xml problem so this can be deleted
       (let [jar-file (JarFile. ^java.lang.String (this-jar))
             entries (enumeration-seq (.entries jar-file))]
         (doseq [^JarEntry entry entries]
           (let [entry-path (.getName entry)]
-            (when (and (string/includes? entry-path (.getPath classp-loc))
+            (when (and (string/includes? entry-path (ensure-unix-path (.getPath classp-loc)))
                        (not (.isDirectory entry)))
               (let [relative-path (-> entry-path
-                                      (string/replace (.getPath classp-loc) "")
+                                      (string/replace (ensure-unix-path (.getPath classp-loc)) "")
                                       (string/replace #"^/" ""))
                     destination (io/file cache-foler-location relative-path)]
-                (prn "JAR" relative-path destination)
                 (when-not (.exists destination)
                   (io/copy (.getInputStream jar-file entry) destination)))))))
       (doseq [[file-name path-obj] resource-dir]
