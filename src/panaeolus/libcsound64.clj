@@ -25,7 +25,7 @@
     (cond
       (re-find #"[Ww]indows" os) :windows
       (re-find #"[Ll]inux" os)   :linux
-      (re-find #"[Mm]ac" os)     :mac)))
+      (re-find #"[Mm]ac" os)     :darwin)))
 
 (defn- get-cache-dir []
   (let [os (get-os)
@@ -86,15 +86,14 @@
             entries (enumeration-seq (.entries jar-file))]
         (doseq [^JarEntry entry entries]
           (let [entry-path (.getName entry)]
-            (when (string/includes? entry-path (ensure-unix-path (.getPath classp-loc)))
+            (when (and (string/includes? entry-path (ensure-unix-path (.getPath classp-loc)))
+                       (not (.isDirectory entry)))
               (let [relative-path (-> entry-path
                                       (string/replace (ensure-unix-path (.getPath classp-loc)) "")
                                       (string/replace #"^/" ""))
                     destination (io/file cache-foler-location relative-path)]
                 (when-not (.exists destination)
-                  (if (.isDirectory entry)
-                    (.mkdirs destination) ; not sure about this
-                    (io/copy (.getInputStream jar-file entry) destination))))))))
+                  (io/copy (.getInputStream jar-file entry) destination)))))))
       (doseq [[file-name path-obj] resource-dir]
         (let [destination (io/file (str cache-foler-location file-name))]
           (when-not (.exists destination)
