@@ -31,7 +31,7 @@
   (let [os (get-os)
         home (System/getProperty "user.home")]
     (case os
-      :windows (let [local-app-data (or (System/getenv "APPDATA")
+      :windows (let [local-app-data (or (System/getenv "LOCALAPPDATA")
                                         (.getAbsolutePath
                                          (io/file home "AppData" "Roaming")))]
                  (.getAbsolutePath (io/file local-app-data "panaeolus" "Cache")))
