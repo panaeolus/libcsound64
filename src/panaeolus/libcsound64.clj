@@ -25,15 +25,15 @@
     (cond
       (re-find #"[Ww]indows" os) :windows
       (re-find #"[Ll]inux" os)   :linux
-      (re-find #"[Mm]ac" os)     :mac)))
+      (re-find #"[Mm]ac" os)     :darwin)))
 
 (defn- get-cache-dir []
   (let [os (get-os)
         home (System/getProperty "user.home")]
     (case os
-      :windows (let [local-app-data (or (System/getenv "APPDATA")
+      :windows (let [local-app-data (or (System/getenv "LOCALAPPDATA")
                                         (.getAbsolutePath
-                                         (io/file home "AppData" "Local")))]
+                                         (io/file home "AppData" "Roaming")))]
                  (.getAbsolutePath (io/file local-app-data "panaeolus" "Cache")))
       :linux (or (System/getenv "XDG_CACHE_HOME")
                  (.getAbsolutePath (io/file home ".cache" "panaeolus")))
@@ -41,10 +41,9 @@
              (.getAbsolutePath
               (io/file library "Caches" "panaeolus"))))))
 
-(def ^:private ^java.io.File csound-cache-folder
+(defn csound-cache-folder []
   (io/file (get-cache-dir)
            (str "csound-" current-csound-version)))
-
 
 (defn this-jar
   "utility function to get the name of jar in which this function is invoked"
@@ -56,6 +55,11 @@
         (.toURI)
         .getPath))
 
+(defn ensure-unix-path [^String path]
+  (-> path
+      (string/replace "\\\\" "/")
+      (string/replace "\\" "/")))
+
 (defn cache-csound!
   "Cache csound and return the cache directory"
   []
@@ -65,25 +69,31 @@
                     (case os :linux "linux" :mac "darwin" :windows "windows")
                     "x86_64")
         resource-dir (cp/resources (.getPath classp-loc))
-        cache-foler-location (.getAbsolutePath csound-cache-folder)]
-    (when (and (= os :darwin) (not (.exists (io/file csound-cache-folder "Opcodes64"))))
-      (.mkdirs (io/file csound-cache-folder "Opcodes64")))
-    (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "jack"))))
-      (.mkdirs (io/file csound-cache-folder "jack")))
-    (when (and (= os :windows) (not (.exists (io/file csound-cache-folder "win32libs"))))
-      (.mkdirs (io/file csound-cache-folder "win32libs")))
+        cache-folder (csound-cache-folder)
+        cache-foler-location (.getAbsolutePath ^java.io.File cache-folder)]
+    (when (and (= os :darwin) (not (.exists (io/file cache-folder "Opcodes64"))))
+      (.mkdirs (io/file cache-folder "Opcodes64")))
+    (when (and (= os :linux) (not (.exists (io/file cache-folder "csound"))))
+      (.mkdirs (io/file cache-folder "csound"))
+      (when (not (.exists (io/file cache-folder "csound" "plugins64-6.0")))
+        (.mkdirs (io/file cache-folder "csound" "plugins64-6.0"))))
+    (when (and (= os :windows) (not (.exists (io/file cache-folder "jack"))))
+      (.mkdirs (io/file cache-folder "jack")))
+    (when (and (= os :windows) (not (.exists (io/file cache-folder "win32libs"))))
+      (.mkdirs (io/file cache-folder "win32libs")))
     (if (empty? resource-dir)
-      ;; FIXME: fix the pom.xml problem so this can be deleted
       (let [jar-file (JarFile. ^java.lang.String (this-jar))
             entries (enumeration-seq (.entries jar-file))]
         (doseq [^JarEntry entry entries]
-		  (prn "ENTRY" entry)
           (let [entry-path (.getName entry)]
-		    (prn entry-path)
-            (when (and (string/includes? entry-path (.getPath classp-loc))
+            (when (and (string/includes? entry-path (ensure-unix-path (.getPath classp-loc)))
                        (not (.isDirectory entry)))
-              (io/copy (.getInputStream jar-file entry)
-                       (io/file cache-foler-location (.getName (io/file (.getName entry)))))))))
+              (let [relative-path (-> entry-path
+                                      (string/replace (ensure-unix-path (.getPath classp-loc)) "")
+                                      (string/replace #"^/" ""))
+                    destination (io/file cache-foler-location relative-path)]
+                (when-not (.exists destination)
+                  (io/copy (.getInputStream jar-file entry) destination)))))))
       (doseq [[file-name path-obj] resource-dir]
         (let [destination (io/file (str cache-foler-location file-name))]
           (when-not (.exists destination)
@@ -99,9 +109,13 @@
     (let [classp-loc (io/file "libcsound64" os "x86_64")
           resource-dir (cp/resources (.getPath classp-loc))
           destination-dir (io/file dest classp-loc)]
-	  (.mkdirs destination-dir)
+      (.mkdirs destination-dir)
       (when (and (= os "darwin") (not (.exists (io/file destination-dir "Opcodes64"))))
         (.mkdirs (io/file destination-dir "Opcodes64")))
+      (when (and (= os "linux") (not (.exists (io/file destination-dir "csound"))))
+        (.mkdirs (io/file destination-dir "csound"))
+        (when (not (.exists (io/file destination-dir "csound" "plugins64-6.0")))
+          (.mkdirs (io/file destination-dir "csound" "plugins64-6.0"))))
       (when (and (= os "windows") (not (.exists (io/file destination-dir "jack"))))
         (.mkdirs (io/file destination-dir "jack")))
       (when (and (= os "windows") (not (.exists (io/file destination-dir "win32libs"))))
