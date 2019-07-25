@@ -37,9 +37,9 @@
                  (.getAbsolutePath (io/file local-app-data "panaeolus" "Cache")))
       :linux (or (System/getenv "XDG_CACHE_HOME")
                  (.getAbsolutePath (io/file home ".cache" "panaeolus")))
-      :mac (let [library (.getAbsolutePath (io/file home "Library"))]
-             (.getAbsolutePath
-              (io/file library "Caches" "panaeolus"))))))
+      :darwin (let [library (.getAbsolutePath (io/file home "Library"))]
+                (.getAbsolutePath
+                 (io/file library "Caches" "panaeolus"))))))
 
 (defn csound-cache-folder []
   (io/file (get-cache-dir)
@@ -64,10 +64,7 @@
   "Cache csound and return the cache directory"
   []
   (let [os (get-os)
-        classp-loc (io/file
-                    "libcsound64"
-                    (case os :linux "linux" :mac "darwin" :windows "windows")
-                    "x86_64")
+        classp-loc (io/file "libcsound64" (name os) "x86_64")
         resource-dir (cp/resources (.getPath classp-loc))
         cache-folder (csound-cache-folder)
         cache-foler-location (.getAbsolutePath ^java.io.File cache-folder)]
